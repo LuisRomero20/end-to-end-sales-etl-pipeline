@@ -1,0 +1,5 @@
+# Ignorar datos y bases de datos
+data/
+
+# Ignorar archivos temporales de Python
+__pycache__/
