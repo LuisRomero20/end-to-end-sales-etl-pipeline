@@ -86,9 +86,47 @@ if len(rango_fecha) == 2:
         (df_filtrado['fecha'].dt.date <= rango_fecha[1])
     ]
 
+# Periodo anterior (mismo nro. de días justo antes) para calcular deltas
+if len(rango_fecha) == 2:
+    dias_periodo  = (rango_fecha[1] - rango_fecha[0]).days + 1
+    ant_fin = rango_fecha[0] - pd.Timedelta(days=1)
+    ant_ini = rango_fecha[0] - pd.Timedelta(days=dias_periodo)
+    df_ant = ventas.copy()
+    if sel_producto != "Todos": df_ant = df_ant[df_ant['producto'] == sel_producto]
+    if sel_cliente  != "Todos": df_ant = df_ant[df_ant['cliente']  == sel_cliente]
+    if sel_estado   != "Todos": df_ant = df_ant[df_ant['estado']   == sel_estado]
+    df_ant = df_ant[(df_ant['fecha'].dt.date >= ant_ini) & (df_ant['fecha'].dt.date <= ant_fin)]
+else:
+    df_ant = pd.DataFrame()
+
+def delta_pct(actual, anterior):
+    """Devuelve string de delta o None si no hay datos previos."""
+    if df_ant.empty or anterior == 0:
+        return None
+    pct = ((actual - anterior) / anterior) * 100
+    return f"{'+' if pct >= 0 else ''}{pct:.1f}%"
+
+# ── Sidebar — Exportar ───────────────────────────────────────────────────────
+st.sidebar.divider()
+st.sidebar.subheader("📥 Exportar")
+cols_export = ['fecha', 'producto', 'cliente', 'cantidad', 'precio_unitario', 'ingreso_total', 'estado']
+df_export = df_filtrado[cols_export].copy()
+df_export['fecha'] = df_export['fecha'].dt.strftime('%Y-%m-%d')
+st.sidebar.download_button(
+    label="Descargar datos filtrados (.csv)",
+    data=df_export.to_csv(index=False).encode('utf-8'),
+    file_name="ventas_filtradas.csv",
+    mime="text/csv"
+)
+
 # ── Título ───────────────────────────────────────────────────────────────────
-st.title("📊 Dashboard Ejecutivo de Ventas")
-st.caption("Automotriz PYME · Pipeline ETL + Forecasting con Prophet")
+col_titulo, col_fecha = st.columns([4, 1])
+with col_titulo:
+    st.title("📊 Dashboard Ejecutivo de Ventas")
+    st.caption("Automotriz PYME · Pipeline ETL + Forecasting con Prophet")
+with col_fecha:
+    ultima_act = pd.Timestamp(os.path.getmtime("data/ventas_pyme.db"), unit='s').strftime('%d/%m/%Y %H:%M')
+    st.metric("🔄 Última actualización", ultima_act)
 st.divider()
 
 # ── Fila 1 — KPIs ────────────────────────────────────────────────────────────
@@ -100,11 +138,17 @@ ticket_promedio  = df_filtrado['ingreso_total'].mean() if total_pedidos > 0 else
 unidades_total   = df_filtrado['cantidad'].sum()
 ingreso_forecast = fut_fc['ingreso_predicho'].sum()
 
-k1.metric("💰 Ingreso Total",       f"${ingreso_total:,.0f}")
-k2.metric("🛒 Total Pedidos",       f"{total_pedidos:,}")
-k3.metric("🎯 Ticket Promedio",     f"${ticket_promedio:,.0f}")
-k4.metric("📦 Unidades Vendidas",   f"{unidades_total:,.0f}")
-k5.metric("🔮 Forecast 30 días",    f"${ingreso_forecast:,.0f}")
+# Métricas del periodo anterior
+ant_ingreso   = df_ant['ingreso_total'].sum()   if not df_ant.empty else 0
+ant_pedidos   = len(df_ant)                     if not df_ant.empty else 0
+ant_ticket    = df_ant['ingreso_total'].mean()  if not df_ant.empty else 0
+ant_unidades  = df_ant['cantidad'].sum()        if not df_ant.empty else 0
+
+k1.metric("💰 Ingreso Total",     f"${ingreso_total:,.0f}",  delta=delta_pct(ingreso_total,   ant_ingreso))
+k2.metric("🛒 Total Pedidos",     f"{total_pedidos:,}",      delta=delta_pct(total_pedidos,   ant_pedidos))
+k3.metric("🎯 Ticket Promedio",   f"${ticket_promedio:,.0f}",delta=delta_pct(ticket_promedio, ant_ticket))
+k4.metric("📦 Unidades Vendidas", f"{unidades_total:,.0f}",  delta=delta_pct(unidades_total,  ant_unidades))
+k5.metric("🔮 Forecast 30 días",  f"${ingreso_forecast:,.0f}")
 
 st.divider()
 
