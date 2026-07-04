@@ -6,7 +6,7 @@ Proyecto de Ingeniería y Análisis de Datos end-to-end diseñado para resolver 
 El proyecto automatiza la ingesta de datos sucios (CSVs con errores humanos, nulos y formatos inconsistentes), los procesa mediante un pipeline en Python, entrena un modelo de forecasting con Prophet para predecir los próximos 30 días de ingresos, y expone todo en un dashboard web interactivo accesible desde el navegador.
 
 ## 🌐 Demo en vivo
-**[Ver Dashboard →]([https://share.streamlit.io/user/luisromero20](https://end-to-end-sales-etl-pipeline-6ao8esedhqua4app97w2o2g.streamlit.app/))**
+**[Ver Dashboard →](https://end-to-end-sales-etl-pipeline-6ao8esedhqua4app97w2o2g.streamlit.app/)**
 
 ## 🛠️ Stack Tecnológico
 | Capa | Tecnología |
